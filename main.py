@@ -141,7 +141,8 @@ class DqnAgent:
         self.loss_history = []
         self.running_loss = 0
         self.learned_counts = 0
-        self.q_value_sum = [0 for i in range(env.action_space.n)]
+        self.q_value_history_temp = []
+        self.q_value_episode_history = []
 
         # RL hyperparameters
         self.epsilon_max = epsilon_max
@@ -233,6 +234,7 @@ class DqnAgent:
 
         # forward pass through the main network to find the Q-values of the states:
         predicted_q = self.main_network(states)
+        self.q_value_history_temp.append(torch.mean(predicted_q).item())
         # selecting the Q-values of the actions that were actually taken:
         predicted_q = predicted_q.gather(dim=1, index=actions)
 
@@ -421,7 +423,7 @@ class ModelTrainTest():
         self.render_fps = hyperparams["render_fps"]
 
         # Define Env
-        self.env = gym.make('LunarLander-v2',
+        self.env = gym.make('LunarLander-v2',max_episode_steps=hyperparams["max_steps"],
                             render_mode="human" if self.render else None)
         self.env.metadata['render_fps'] = self.render_fps  # For max frame rate make it 0
 
@@ -480,6 +482,9 @@ class ModelTrainTest():
                 self.agent.update_epsilon()
             else:
                 self.agent.update_boltzmann_temp()
+
+            self.agent.q_value_episode_history.append(np.mean(self.agent.q_value_history_temp))
+            self.agent.q_value_history_temp = []
 
             # -- based on interval
             if episode % self.save_interval == 0:
@@ -542,6 +547,8 @@ class ModelTrainTest():
         pygame.quit()  # close the rendering window
 
     def plot_training(self, episode):
+        if episode != self.max_episodes:
+            return
         # Calculate the Simple Moving Average (SMA) with a window size of 50
         sma = np.convolve(self.reward_history, np.ones(50) / 50, mode='valid')
 
@@ -578,6 +585,21 @@ class ModelTrainTest():
         plt.tight_layout()
         plt.grid(True)
         plt.show()
+        plt.clf()
+        plt.close()
+
+        plt.figure()
+        plt.title("Q-value mean")
+        plt.plot(self.agent.q_value_episode_history, label='Mean', color='blue', alpha=1)
+        plt.xlabel("Episode")
+        plt.ylabel("Q mean")
+
+        # Only save as file if last episode
+        if episode == self.max_episodes:
+            plt.savefig('./Q_value_mean.png', format='png', dpi=600, bbox_inches='tight')
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -586,8 +608,8 @@ if __name__ == '__main__':
     render = not train_mode
     RL_hyperparams = {
         "train_mode": train_mode,
-        "RL_load_path": './double_dqn/final_weights' + '_' + '1000' + '.pth',
-        "save_path": './double_dqn/final_weights',
+        "RL_load_path": './double_dqn/final_weights2' + '_' + '400' + '.pth',
+        "save_path": './double_dqn/final_weights2',
         "save_interval": 100,
 
         "clip_grad_norm": 5,
@@ -605,7 +627,7 @@ if __name__ == '__main__':
         "temp": 15 if train_mode else 0.1,
         "temp_decay": 0.994,
         "epsilon_or_boltzmann": True,
-        "epsilon_decay": 0.997,
+        "epsilon_decay": 0.998,
         "d3_or_d": False,
         "memory_capacity": 125_000 if train_mode else 0,
 
