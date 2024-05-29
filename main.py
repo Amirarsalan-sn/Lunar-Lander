@@ -54,6 +54,16 @@ class ReplayMemory:
         self.rewards.append(reward)
         self.dones.append(done)
 
+    def store_batch(self, memory):
+        """
+        Stores a batch of experiences. (implemented for prioritized experience memory).
+        """
+        self.states.extend(memory.states)
+        self.actions.extend(memory.actions)
+        self.next_states.extend(memory.next_states)
+        self.rewards.extend(memory.rewards)
+        self.dones.extend(memory.dones)
+
     def sample(self, batch_size):
         """
         Randomly sample transitions from memory, then convert sampled transitions
@@ -125,6 +135,37 @@ class DqnNetwork(nn.Module):
 
         Q = self.FC(x)
         return Q
+
+
+class DuelingDQN(nn.Module):
+    def __init__(self, num_actions, input_dim):
+        """
+        Dueling DQN implementation.
+        """
+        super(DuelingDQN, self).__init__()
+
+        self.feature_net = nn.Sequential(
+            nn.Linear(input_dim, 12),
+            nn.ReLU(inplace=True),
+            nn.Linear(12, 8),
+            nn.ReLU(inplace=True)
+        )
+
+        self.value = nn.Sequential(
+            nn.Linear(8, 1)
+        )
+
+        self.advantage = nn.Sequential(
+            nn.Linear(8, num_actions)
+        )
+
+    def forward(self, x):
+        features = self.feature_net(x)
+        values = self.value(features)
+        advantages = self.advantage(features)
+
+        #  Q = V + A - (mean(A))
+        return values + (advantages - advantages.mean(dim=1, keepdim=True))
 
 
 class DqnAgent:
@@ -423,14 +464,14 @@ class ModelTrainTest():
         self.render_fps = hyperparams["render_fps"]
 
         # Define Env
-        self.env = gym.make('LunarLander-v2',max_episode_steps=hyperparams["max_steps"],
+        self.env = gym.make('LunarLander-v2', max_episode_steps=hyperparams["max_steps"],
                             render_mode="human" if self.render else None)
         self.env.metadata['render_fps'] = self.render_fps  # For max frame rate make it 0
 
         warnings.filterwarnings("ignore", category=UserWarning)
 
         # Apply RewardWrapper
-        #self.env = StepWrapper(self.env)
+        # self.env = StepWrapper(self.env)
         self.agent = DqnAgent(env=self.env,
                               epsilon_max=self.epsilon_max,
                               epsilon_min=self.epsilon_min,
@@ -455,13 +496,13 @@ class ModelTrainTest():
             truncation = False
             step_size = 0
             episode_reward = 0
-
+            episode_mem = ReplayMemory(capacity=None)
             while not done and not truncation:
                 action = self.agent.select_action(state)
                 next_state, reward, done, truncation, _ = self.env.step(action)
 
                 self.agent.replay_memory.store(state, action, next_state, reward, done)
-
+                episode_mem.store(state, action, next_state, reward, done)
                 if len(self.agent.replay_memory) > self.batch_size:
                     self.agent.learn(self.batch_size, (done or truncation))
 
@@ -505,6 +546,12 @@ class ModelTrainTest():
                           f"Raw Reward: {episode_reward:.2f}, "
                           f"Boltzmann: {self.agent.temp:.2f}")
             print(result)
+            if episode_reward >= 170:  # it is considered a solution or a good play(A GOOD EXPERIENCE).
+                repetition = 30 * (self.max_episodes//step_size)
+                print(f"Found a good experience, adding it {repetition} times into the replay memory.")
+                for i in range(repetition):
+                    self.agent.replay_memory.store_batch(episode_mem)
+                print(f"Done {repetition*step_size} experiences added.")
         self.plot_training(episode)
 
     def train(self):
@@ -533,7 +580,6 @@ class ModelTrainTest():
             while not done and not truncation:
                 action = self.agent.select_action(state)
                 next_state, reward, done, truncation, _ = self.env.step(action)
-
                 state = next_state
                 episode_reward += reward
                 step_size += 1
@@ -547,8 +593,6 @@ class ModelTrainTest():
         pygame.quit()  # close the rendering window
 
     def plot_training(self, episode):
-        if episode != self.max_episodes:
-            return
         # Calculate the Simple Moving Average (SMA) with a window size of 50
         sma = np.convolve(self.reward_history, np.ones(50) / 50, mode='valid')
 
@@ -608,8 +652,8 @@ if __name__ == '__main__':
     render = not train_mode
     RL_hyperparams = {
         "train_mode": train_mode,
-        "RL_load_path": './double_dqn/final_weights2' + '_' + '400' + '.pth',
-        "save_path": './double_dqn/final_weights2',
+        "RL_load_path": './double_dqn/pr_mem3' + '_' + '500' + '.pth',
+        "save_path": './double_dqn/pr_mem3',
         "save_interval": 100,
 
         "clip_grad_norm": 5,
@@ -627,7 +671,7 @@ if __name__ == '__main__':
         "temp": 15 if train_mode else 0.1,
         "temp_decay": 0.994,
         "epsilon_or_boltzmann": True,
-        "epsilon_decay": 0.998,
+        "epsilon_decay": 0.996,
         "d3_or_d": False,
         "memory_capacity": 125_000 if train_mode else 0,
 
