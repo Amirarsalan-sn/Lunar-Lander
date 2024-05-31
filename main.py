@@ -375,17 +375,16 @@ class StepWrapper(gym.Wrapper):
             action (int): The action to be taken.
         """
 
-        state, reward, done, truncation, info = self.env.step(action)  # Same as before as usual
+        state, reward, done, truncation, info = self.env.step(action)
 
-        modified_reward = self.reward_wrapper.reward(
-            state)  # Give the modified state to another Wrapper to return the modified reward
         modified_state = self.observation_wrapper.observation(state)
-        return state, modified_reward, done, truncation, info  # The same returns as usual but with modified versions of the state and reward functions
+        modified_reward = self.reward_wrapper.reward(modified_state, reward)
+        return modified_state, modified_reward, done, truncation, info  # The same returns as usual but with modified versions of the state and reward functions
 
     def reset(self, seed):
         state, info = self.env.reset(seed=seed)  # Same as before as usual
         modified_state = self.observation_wrapper.observation(state)
-        return state, info  # Same as before as usual but with returning the modified version of the state
+        return modified_state, info  # Same as before as usual but with returning the modified version of the state
 
 
 class ObservationWrapper(gym.ObservationWrapper):
@@ -394,10 +393,14 @@ class ObservationWrapper(gym.ObservationWrapper):
 
     def observation(self, state):  # state normalizer
         state = np.array(state)
-        state[0] = (state[0] + 4.8) / 9.6
-        state[1] = (state[1] + 10) / 20
-        state[2] = (state[2] + 0.418) / 0.836
-        state[3] = (state[3] + 10) / 20
+        state[0] = (state[0] + 1.5) / 3
+        state[1] = (state[1] + 1.5) / 3
+        state[2] = (state[2] + 5) / 10
+        state[3] = (state[3] + 5) / 10
+        state[4] = (state[4] + 3.1415927) / 6.2831854
+        state[5] = (state[5] + 5) / 10
+        state[6] = state[6]
+        state[7] = state[7]
 
         return state
 
@@ -413,7 +416,7 @@ class RewardWrapper(gym.RewardWrapper):
     def __init__(self, env):
         super().__init__(env)
 
-    def reward(self, state):
+    def reward(self, state, reward):
         """
         Modifies the reward based on the current state of the environment.
 
@@ -423,14 +426,8 @@ class RewardWrapper(gym.RewardWrapper):
         Returns:
             float: The modified reward.
         """
-        current_position = state[0]
-        current_angel = state[2]
 
-        position_reward = math.cos((2 * math.pi * current_position) / 4.8)
-        angel_reward = math.cos((2 * math.pi * current_angel) / 0.419)
-
-        modified_reward = position_reward + 2 * angel_reward
-        return modified_reward
+        return reward
 
 
 class ModelTrainTest():
@@ -471,7 +468,7 @@ class ModelTrainTest():
         warnings.filterwarnings("ignore", category=UserWarning)
 
         # Apply RewardWrapper
-        # self.env = StepWrapper(self.env)
+        self.env = StepWrapper(self.env)
         self.agent = DqnAgent(env=self.env,
                               epsilon_max=self.epsilon_max,
                               epsilon_min=self.epsilon_min,
@@ -496,13 +493,17 @@ class ModelTrainTest():
             truncation = False
             step_size = 0
             episode_reward = 0
-            episode_mem = ReplayMemory(capacity=None)
             while not done and not truncation:
                 action = self.agent.select_action(state)
                 next_state, reward, done, truncation, _ = self.env.step(action)
-
-                self.agent.replay_memory.store(state, action, next_state, reward, done)
-                episode_mem.store(state, action, next_state, reward, done)
+                self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))
+                """if float(reward) >= 100:
+                    print(f'found a good experience {reward}, adding it 1000 times into the memory.')
+                    for i in range(10):
+                        self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))
+                    print('done.')
+                else:
+                    self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))"""
                 if len(self.agent.replay_memory) > self.batch_size:
                     self.agent.learn(self.batch_size, (done or truncation))
 
@@ -546,12 +547,6 @@ class ModelTrainTest():
                           f"Raw Reward: {episode_reward:.2f}, "
                           f"Boltzmann: {self.agent.temp:.2f}")
             print(result)
-            if episode_reward >= 170:  # it is considered a solution or a good play(A GOOD EXPERIENCE).
-                repetition = 30 * (self.max_episodes//step_size)
-                print(f"Found a good experience, adding it {repetition} times into the replay memory.")
-                for i in range(repetition):
-                    self.agent.replay_memory.store_batch(episode_mem)
-                print(f"Done {repetition*step_size} experiences added.")
         self.plot_training(episode)
 
     def train(self):
@@ -593,57 +588,60 @@ class ModelTrainTest():
         pygame.quit()  # close the rendering window
 
     def plot_training(self, episode):
-        # Calculate the Simple Moving Average (SMA) with a window size of 50
-        sma = np.convolve(self.reward_history, np.ones(50) / 50, mode='valid')
+        if episode != self.max_episodes:
+            return
+        try:
+            # Calculate the Simple Moving Average (SMA) with a window size of 50
+            sma = np.convolve(self.reward_history, np.ones(50) / 50, mode='valid')
 
-        # Clip max (high) values for better plot analysis
-        reward_history = np.clip(self.reward_history, a_min=None, a_max=100)
-        sma = np.clip(sma, a_min=None, a_max=100)
+            # Clip max (high) values for better plot analysis
+            reward_history = np.clip(self.reward_history, a_min=None, a_max=100)
+            sma = np.clip(sma, a_min=None, a_max=100)
 
-        plt.figure()
-        plt.title("Obtained Rewards")
-        plt.plot(reward_history, label='Raw Reward', color='#4BA754', alpha=1)
-        plt.plot(sma, label='SMA 50', color='#F08100')
-        plt.xlabel("Episode")
-        plt.ylabel("Rewards")
-        plt.legend()
+            plt.figure()
+            plt.title("Obtained Rewards")
+            plt.plot(reward_history, label='Raw Reward', color='#4BA754', alpha=1)
+            plt.plot(sma, label='SMA 50', color='#F08100')
+            plt.xlabel("Episode")
+            plt.ylabel("Rewards")
+            plt.legend()
+            plt.tight_layout()
 
-        # Only save as file if last episode
-        if episode == self.max_episodes:
-            plt.savefig('./reward_plot.png', format='png', dpi=600, bbox_inches='tight')
-        plt.tight_layout()
-        plt.grid(True)
-        plt.show()
-        plt.clf()
-        plt.close()
+            # Only save as file if last episode
+            if episode == self.max_episodes:
+                plt.savefig('./reward_plot.png', format='png', dpi=600, bbox_inches='tight')
+            plt.show()
+        except Exception as e:
+            print('Error in sma')
 
-        plt.figure()
-        plt.title("Network Loss")
-        plt.plot(self.agent.loss_history, label='Loss', color='#8921BB', alpha=1)
-        plt.xlabel("Episode")
-        plt.ylabel("Loss")
+        try:
+            plt.figure()
+            plt.title("Network Loss")
+            plt.plot(self.agent.loss_history, label='Loss', color='#8921BB', alpha=1)
+            plt.xlabel("Episode")
+            plt.ylabel("Loss")
+            plt.tight_layout()
 
-        # Only save as file if last episode
-        if episode == self.max_episodes:
-            plt.savefig('./Loss_plot.png', format='png', dpi=600, bbox_inches='tight')
-        plt.tight_layout()
-        plt.grid(True)
-        plt.show()
-        plt.clf()
-        plt.close()
+            # Only save as file if last episode
+            if episode == self.max_episodes:
+                plt.savefig('./Loss_plot.png', format='png', dpi=600, bbox_inches='tight')
+            plt.show()
+        except Exception:
+            print('Error in loss')
+        try:
+            plt.figure()
+            plt.title("Q-value mean")
+            plt.plot(self.agent.q_value_episode_history, label='Mean', color='blue', alpha=1)
+            plt.xlabel("Episode")
+            plt.ylabel("Q mean")
+            plt.tight_layout()
 
-        plt.figure()
-        plt.title("Q-value mean")
-        plt.plot(self.agent.q_value_episode_history, label='Mean', color='blue', alpha=1)
-        plt.xlabel("Episode")
-        plt.ylabel("Q mean")
-
-        # Only save as file if last episode
-        if episode == self.max_episodes:
-            plt.savefig('./Q_value_mean.png', format='png', dpi=600, bbox_inches='tight')
-        plt.tight_layout()
-        plt.grid(True)
-        plt.show()
+            # Only save as file if last episode
+            if episode == self.max_episodes:
+                plt.savefig('./Q_value_mean.png', format='png', dpi=600, bbox_inches='tight')
+            plt.show()
+        except Exception:
+            print('Error in Q')
 
 
 if __name__ == '__main__':
@@ -652,8 +650,8 @@ if __name__ == '__main__':
     render = not train_mode
     RL_hyperparams = {
         "train_mode": train_mode,
-        "RL_load_path": './double_dqn/pr_mem3' + '_' + '500' + '.pth',
-        "save_path": './double_dqn/pr_mem3',
+        "RL_load_path": './double_dqn_no_pr/final_weights' + '_' + '800' + '.pth',
+        "save_path": './double_dqn_no_pr/final_weights',
         "save_interval": 100,
 
         "clip_grad_norm": 5,
@@ -667,11 +665,11 @@ if __name__ == '__main__':
 
         "epsilon_max": 0.999 if train_mode else -1,
         "epsilon_min": 0.01,
-        "temp_min": 0.1,
-        "temp": 15 if train_mode else 0.1,
+        "temp_min": 0.001,
+        "temp": 15 if train_mode else 0.01,
         "temp_decay": 0.994,
-        "epsilon_or_boltzmann": True,
-        "epsilon_decay": 0.996,
+        "epsilon_or_boltzmann": False,
+        "epsilon_decay": 0.997,
         "d3_or_d": False,
         "memory_capacity": 125_000 if train_mode else 0,
 
