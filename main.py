@@ -143,21 +143,40 @@ class DuelingDQN(nn.Module):
         Dueling DQN implementation.
         """
         super(DuelingDQN, self).__init__()
-
+        # print('dueling 64')
         self.feature_net = nn.Sequential(
-            nn.Linear(input_dim, 12),
+            nn.Linear(input_dim, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(12, 8),
+            nn.Linear(128, 64),
             nn.ReLU(inplace=True)
         )
 
         self.value = nn.Sequential(
-            nn.Linear(8, 1)
+            nn.Linear(64, 32),
+            nn.ReLU(inplace=True),
+            nn.Linear(32, 1)
         )
 
         self.advantage = nn.Sequential(
-            nn.Linear(8, num_actions)
+            nn.Linear(64, 32),
+            nn.ReLU(inplace=True),
+            nn.Linear(32, num_actions)
         )
+
+        for layer in [self.feature_net]:
+            for module in layer:
+                if isinstance(module, nn.Linear):
+                    nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+
+        for layer in [self.value]:
+            for module in layer:
+                if isinstance(module, nn.Linear):
+                    nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+
+        for layer in [self.advantage]:
+            for module in layer:
+                if isinstance(module, nn.Linear):
+                    nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
 
     def forward(self, x):
         features = self.feature_net(x)
@@ -204,9 +223,12 @@ class DqnAgent:
         # Initiate the network models
         input_dim = self.observation_space.shape[0]
         output_dim = self.action_space.n
-
-        self.main_network = DqnNetwork(num_actions=output_dim, input_dim=input_dim).to(device)
-        self.target_network = DqnNetwork(num_actions=output_dim, input_dim=input_dim).to(device).eval()
+        if d3_or_d:
+            self.main_network = DuelingDQN(num_actions=output_dim, input_dim=input_dim).to(device)
+            self.target_network = DuelingDQN(num_actions=output_dim, input_dim=input_dim).to(device).eval()
+        else:
+            self.main_network = DqnNetwork(num_actions=output_dim, input_dim=input_dim).to(device)
+            self.target_network = DqnNetwork(num_actions=output_dim, input_dim=input_dim).to(device).eval()
         self.target_network.load_state_dict(self.main_network.state_dict())
 
         self.clip_grad_norm = clip_grad_norm  # For clipping exploding gradients caused by high reward value
@@ -232,13 +254,16 @@ class DqnAgent:
             # Check if the state is a tensor or not. If not, make it a tensor
             if not torch.is_tensor(state):
                 state = torch.as_tensor(state, dtype=torch.float32, device=device)
-
+            if self.d3_or_d and len(state.shape) == 1:
+                state = state.unsqueeze(0)
             with torch.no_grad():
                 Q_values = self.main_network(state)
                 action = torch.argmax(Q_values).item()
         else:  # Exploration: Boltzmann.
             if not torch.is_tensor(state):
                 state = torch.as_tensor(state, dtype=torch.float32, device=device)
+            if self.d3_or_d and len(state.shape) == 1:
+                state = state.unsqueeze(0)
             with torch.no_grad():
                 q = self.main_network(state)
                 q /= self.temp  # dividing each Q(s, a) by the temperature.
@@ -260,12 +285,6 @@ class DqnAgent:
             If self.d3_or_d was true, the agent is a d3qn agent and will learn based of Dueling Double DQN.
             Else, it will learn based on Double DQN.
         """
-        if self.d3_or_d:
-            self.learn_d3qn(batch_size, done)
-        else:
-            self.learn_ddqn(batch_size, done)
-
-    def learn_ddqn(self, batch_size, done):
         # Sample a batch of experiences from the replay memory
         states, actions, next_states, rewards, dones = self.replay_memory.sample(batch_size)
 
@@ -308,9 +327,6 @@ class DqnAgent:
         torch.nn.utils.clip_grad_norm_(self.main_network.parameters(), self.clip_grad_norm)
 
         self.optimizer.step()  # Update the parameters of the main network using the optimizer
-
-    def learn_d3qn(self, batch_size, done):
-        pass
 
     def hard_update(self):
         """
@@ -415,6 +431,7 @@ class RewardWrapper(gym.RewardWrapper):
 
     def __init__(self, env):
         super().__init__(env)
+        self.bad_counter = 0
 
     def reward(self, state, reward):
         """
@@ -426,8 +443,20 @@ class RewardWrapper(gym.RewardWrapper):
         Returns:
             float: The modified reward.
         """
+        addition = 0
+        if state[3] > 0.55:
+            #print('up')
+            return -10
+        if (0.49 < state[3] < 0.52) and (state[1] > 0.52):
+            self.bad_counter = min(90, self.bad_counter + 1)
+            #print(f'{self.bad_counter} state[3]: {state[3]}, state[1]: {state[1]}')
+            addition = -math.exp(self.bad_counter - 80)
+        else:
+            self.bad_counter = 0
 
-        return reward
+        addition = max(-1.5, addition)
+
+        return float(reward) + addition
 
 
 class ModelTrainTest():
@@ -480,7 +509,8 @@ class ModelTrainTest():
                               clip_grad_norm=self.clip_grad_norm,
                               learning_rate=self.learning_rate,
                               discount=self.discount_factor,
-                              memory_capacity=self.memory_capacity)
+                              memory_capacity=self.memory_capacity,
+                              d3_or_d=self.d3_or_d)
 
     def dqn_train(self):
         total_steps = 0
@@ -513,11 +543,11 @@ class ModelTrainTest():
 
                 state = next_state
                 episode_reward += reward
+                total_steps += 1
                 step_size += 1
 
             # Appends for tracking history
             self.reward_history.append(episode_reward)  # episode reward
-            total_steps += step_size
 
             # Decay epsilon at the end of each episode
             if self.epsilon_or_boltzmann:
@@ -571,8 +601,9 @@ class ModelTrainTest():
             truncation = False
             step_size = 0
             episode_reward = 0
-
+            reward = 0
             while not done and not truncation:
+                #print(f'y speed: {state[3]}, y pos: {state[1]}, reward : {reward}')
                 action = self.agent.select_action(state)
                 next_state, reward, done, truncation, _ = self.env.step(action)
                 state = next_state
@@ -588,8 +619,6 @@ class ModelTrainTest():
         pygame.quit()  # close the rendering window
 
     def plot_training(self, episode):
-        if episode != self.max_episodes:
-            return
         try:
             # Calculate the Simple Moving Average (SMA) with a window size of 50
             sma = np.convolve(self.reward_history, np.ones(50) / 50, mode='valid')
@@ -650,8 +679,8 @@ if __name__ == '__main__':
     render = not train_mode
     RL_hyperparams = {
         "train_mode": train_mode,
-        "RL_load_path": './double_dqn_no_pr/final_weights' + '_' + '800' + '.pth',
-        "save_path": './double_dqn_no_pr/final_weights',
+        "RL_load_path": './d3qn/final_weights_r_new' + '_' + '900' + '.pth',
+        "save_path": './d3qn/final_weights_r_new',
         "save_interval": 100,
 
         "clip_grad_norm": 5,
@@ -666,12 +695,12 @@ if __name__ == '__main__':
         "epsilon_max": 0.999 if train_mode else -1,
         "epsilon_min": 0.01,
         "temp_min": 0.001,
-        "temp": 15 if train_mode else 0.01,
-        "temp_decay": 0.994,
-        "epsilon_or_boltzmann": False,
-        "epsilon_decay": 0.997,
-        "d3_or_d": False,
-        "memory_capacity": 125_000 if train_mode else 0,
+        "temp": 15 if train_mode else 0.001,
+        "temp_decay": 0.996,
+        "epsilon_or_boltzmann": True,
+        "epsilon_decay": 0.996,
+        "d3_or_d": True,
+        "memory_capacity": 10_000 if train_mode else 0,
 
         "render_fps": 60,
     }
