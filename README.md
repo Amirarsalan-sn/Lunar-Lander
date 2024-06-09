@@ -95,7 +95,9 @@ The reward wrapper code is as fallows:
 It actually helped the agent in finding soloutions and the agent found more soloutions earlier than the prior methods.
 
 Epsiode: 500
+
 Episode steps: 544
+
 Episode reward: 237
 
 
@@ -103,13 +105,34 @@ Episode reward: 237
   <img src="images/gif/d3qn_500ep_544st_237r_reward_wrap.gif" alt="game play">
 </p>
 
+Epsiode: 600
+
+Episode steps: 273
+
+Episode reward: 269
+
+
 <p align="center">
   <img src="images/gif/d3qn_600ep_273st_269r_reward_wrap.gif" alt="game play">
 </p>
 
+
+Epsiode: 800
+
+Episode steps: 654
+
+Episode reward: 214
+
 <p align="center">
   <img src="images/gif/d3qn_800ep_654st_214r_reward_wrap.gif" alt="game play">
 </p>
+
+
+Epsiode: 900
+
+Episode steps: 827
+
+Episode reward: 178
 
 <p align="center">
   <img src="images/gif/d3qn_900ep_827st_178r_reward_wrap.gif" alt="game play">
@@ -122,3 +145,28 @@ Episode reward: 237
 </p>
 
 ### Hybrid Dueling Double DQN With Reward Wrapper
+According to [this article](https://doi.org/10.48550/arXiv.1512.02011), the errors in the Q-value estimates can be propagated through the network in an unstable manner via the MSE loss function and prevent reliable convergence to the optimal Q function. This instability is exacerbated when using a large gamma (γ) close to 1, as it increases the complexity of the policy space that needs to be learned. The authors hypothesize that starting with a smaller γ initially targets simpler policies and reduces the propagation of errors in the early stages of training. Then, gradually increasing γ allows the policy complexity to be learned in a more stable manner. They also combined this approach with a decaying learning rate during training to achieve further improvements. They empirically found that the increasing gamma approach, along with a gradually decreasing learning rate, was able to show improved training stability and better final performance on Atari games compared to the baseline DQN approach. However, they did not conduct these experiments with the D3QN algorithm. Now, I used this method (along with decreasing the learning rate gradually) to see if it makes any difference. The disount factor is initiated by zero and is increased according to this formula:
+
+<p align="center">
+  <img src="images/formulas/discount.png" alt="discount">
+</p>
+
+Results of training are as follows:
+
+Episode: 1000
+
+Episode steps: 542
+
+Episode reward: 208
+
+<p align="center">
+  <img src="images/gif/d3qn_h_1000ep_542st_208r.gif" alt="game play">
+</p>
+
+<p align="center">
+  <img src="/images/d3qn_r_new/reward_plot2.png" alt="reward" width=350 style="margin-right: 10px;">
+  <img src="/images/d3qn_r_new/Q_value_mean2.png" alt="q mean" width=350 style="margin-right: 10px;">
+  <img src="/images/d3qn_r_new/Loss_plot2.png" alt="loss" width=350>
+</p>
+
+If you compare the rewards plot with the previous method, you will realise that somhow the plot is shifted to right, meaning the hybrid d3qn was also able to find answers faster than regular d3qn.
