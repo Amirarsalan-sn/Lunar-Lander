@@ -193,8 +193,8 @@ Episode reward: 288
 
 <p align="center">
   <img src="/images/d3qn_h/reward_plot_mem.png" alt="reward" width=350 style="margin-right: 10px;">
-  <img src="/images/d3qn_h/Q_value_mean2_mem.png" alt="q mean" width=350 style="margin-right: 10px;">
-  <img src="/images/d3qn_h/Loss_plot2_mem.png" alt="loss" width=350>
+  <img src="/images/d3qn_h/Q_value_mean_mem.png" alt="q mean" width=350 style="margin-right: 10px;">
+  <img src="/images/d3qn_h/Loss_plot_mem.png" alt="loss" width=350>
 </p>
 
 **Thank you for your time and patience in reading my findings in the journey of solving Lunar Lander, hope you've found it usefull, please contact me if you had any questions.**  
