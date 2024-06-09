@@ -54,10 +54,40 @@ Episode reward: 262
 </p>
 
 <p align="center">
-  <img src="/images/double_boltzman/reward_plot.png" alt="reward" width=450 style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean" width=450 style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Loss_plot.png" alt="loss" width=450>
+  <img src="/images/double_boltzman/reward_plot.png" alt="reward" width=350 style="margin-right: 10px;">
+  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean" width=350 style="margin-right: 10px;">
+  <img src="/images/double_boltzman/Loss_plot.png" alt="loss" width=350>
 </p>
 
 ## Dueling Double DQN
+Dueling Double DQN(D3QN) is an extension of the Double DQN (Deep Q-Network) algorithm. The key idea behind Dueling Double DQN is to separate the representation of the state value function (V(s)) and the action advantage function (A(s,a)) in the neural network architecture. This allows the model to learn these two components independently, which can lead to better performance in some environments.
 
+<p align="center">
+  <img src="images/formulas/DDQN.jpg" alt="architecture">
+</p>
+
+### Dueling Double DQN With Reward Wrapper
+Dueling Double DQN also suffered from hovering. So, I decided to implement a reward wrapper which prevented the agent from hovering the formula is as follow:
+
+<p align="center">
+  <img src="images/formulas/reward_wrap.png" alt="reward wrapper">
+</p>
+
+This formula give exponential minus reward to the agent as far as it is hovering. But, hovering is essential for maintaining stabality. So, the agent needs to hover if it wants to gain balance and land safely. Therefore, a Hover Limit is presented into the formula: reward wrapper counts the steps of agents hovering, as far as these steps are below the Hover Limit we are fine. When the hovering steps exceeds the Hover Limit, the agent gets **exponentialy** bad rewards. But, there is another possiblity here, the agent can conclude going up is the best action always but why? Sofar, the agent thought going down would result in failure so it hovers, no we are saying that hovering is also bad so it can conclude going up is the best option available (if the mean of the rewards of "going up" is less than the mean of the reward of "going down"). In order to solve this issue, whenever the agent's speed is higher than a particular amount, a sufficient minus reward is returned. 
+
+The reward wrapper code is as fallows:
+```python
+    def reward(self, state, reward):
+        addition = 0
+        if state[3] > 0.55:
+            return -10
+        if (0.49 < state[3] < 0.52) and (state[1] > 0.52):
+            self.bad_counter = min(110, self.bad_counter + 1)
+            addition = -math.exp(self.bad_counter - 100)
+        else:
+            self.bad_counter = 0
+
+        addition = max(-1.5, addition)
+
+        return float(reward) + addition
+```
