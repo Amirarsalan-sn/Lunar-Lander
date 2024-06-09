@@ -67,7 +67,7 @@ Dueling Double DQN(D3QN) is an extension of the Double DQN (Deep Q-Network) algo
 </p>
 
 ### Dueling Double DQN With Reward Wrapper
-Dueling Double DQN also suffered from hovering. So, I decided to implement a reward wrapper which prevented the agent from hovering the formula is as follow:
+Dueling Double DQN also suffered from hovering. So, I decided to implement a reward wrapper which prevented the agent from hovering and instead of using Boltzman policy, we switch back to epsilon-greedy. The formula is as follow:
 
 <p align="center">
   <img src="images/formulas/reward_wrap.png" alt="reward wrapper">
@@ -91,3 +91,34 @@ The reward wrapper code is as fallows:
 
         return float(reward) + addition
 ```
+
+It actually helped the agent in finding soloutions and the agent found more soloutions earlier than the prior methods.
+
+Epsiode: 500
+Episode steps: 544
+Episode reward: 237
+
+
+<p align="center">
+  <img src="images/gif/d3qn_500ep_544st_237r_reward_wrap.gif" alt="game play">
+</p>
+
+<p align="center">
+  <img src="images/gif/d3qn_600ep_273st_269r_reward_wrap.gif" alt="game play">
+</p>
+
+<p align="center">
+  <img src="images/gif/d3qn_800ep_654st_214r_reward_wrap.gif" alt="game play">
+</p>
+
+<p align="center">
+  <img src="images/gif/d3qn_900ep_827st_178r_reward_wrap.gif" alt="game play">
+</p>
+
+<p align="center">
+  <img src="/images/d3qn_r_new/reward_plot.png" alt="reward" width=350 style="margin-right: 10px;">
+  <img src="/images/d3qn_r_new/Q_value_mean.png" alt="q mean" width=350 style="margin-right: 10px;">
+  <img src="/images/d3qn_r_new/Loss_plot.png" alt="loss" width=350>
+</p>
+
+### Hybrid Dueling Double DQN With Reward Wrapper
