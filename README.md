@@ -1,5 +1,5 @@
 # Lunar-Lander
-This project demonstrates several soloutions for the LunarLander [environment gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/). The environment is sloved mainly using double dqn and dueling double dqn (d3qn). But, for solving the challenges I faced during the training process, other methods combined with these two methods are tested in order to get the proper result which are fully described in this document. They are combined with different techniques like Boltzman policy, reward wrapping and even an imitation method of learning is used. The best soloution (the one with the highest gained reward) was found using the last method. So bear with me.
+This project demonstrates several soloutions for the LunarLander [environment gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/). The environment is sloved mainly using double dqn and dueling double dqn (d3qn). But, for solving the challenges I faced during the training process, other methods combined with these two methods are tested in order to get the proper result which are fully described in this document. The two main methods are combined with different techniques like Boltzman policy, reward wrapping and even an imitation method of learning. The best soloution (the one with the highest gained reward) was found using the last method. So bear with me.
 ## Table of Contents
 - [Double DQN](#double-dqn)
   - [Double DQN Simple](#double-dqn-simple)
@@ -169,17 +169,17 @@ Episode reward: 208
   <img src="/images/d3qn_h/Loss_plot2.png" alt="loss" width=350>
 </p>
 
-If you compare the rewards plot with the previous method, you will realise that somhow the plot is shifted to right, meaning the hybrid d3qn was also able to find answers faster than regular d3qn.
+If you compare the rewards plot with the previous method, you will realise that somhow the plot is shifted to the left, meaning the hybrid d3qn was also able to find answers faster than regular d3qn.
 
 ### Simple Hybrid Dueling Double DQN
-For testing the power of this method I even tested it just with state wrapper (no reward wrapper). The agent could easily find answers which the preceding methods couldn't do with epsilon greedy policy.
+For testing the power of this method I even tested it just with state wrapper (no reward wrapper). The agent could easily find answers with epsilon greedy policy which, the preceding methods couldn't do so (using epsilon greedy).
 
 <p align="center">
   <img src="/images/d3qn_h/reward_plot_simple.png" alt="reward" width=350 style="margin-right: 10px;">
 </p>
 
 ### Imitation After D3QN
-One idea which I came up with, was to use some sort of imitation methods along with hybrid d3qn. The idea was to use the hybrid d3qn to find good soloutions and store these good soloutions in another memory. After a certain number of episodes, the experience replay memory of the agent chenges with this good memory. This way the agent is encouraged to imitate good experiences and output good (or even better) soloutions. The agent experienced a performance collapse at changing the memories first, but, after some episodes it found the best soloution which gained the highest reward among other methods tried earlier.
+One idea which I came up with, was to use some sort of imitation methods after hybrid d3qn. The idea was to use the hybrid d3qn to find good soloutions fast and store these good soloutions in another memory. After a certain number of episodes, the experience replay memory of the agent chenges with this good memory and this memory expands only with successful experiences along with the imitation process. This way the agent is encouraged to imitate good experiences and output good (or even better) soloutions. First,The agent experienced a performance collapse at changing the memories, but, after some episodes it found the best soloution which gained the highest reward among other methods tried earlier.
 
 Episode: 1503
 
