@@ -218,6 +218,8 @@ class DqnAgent:
         self.action_space.seed(seed)  # Set the seed to get reproducible results when sampling the action space
         self.observation_space = env.observation_space
         self.replay_memory = ReplayMemory(memory_capacity)
+        self.good_memory = deque(maxlen=memory_capacity)
+        self.choose_good_mem = False
         self.d3_or_d = d3_or_d  # Specifies double DQN or Dueling Double DQN
 
         # Initiate the network models
@@ -247,7 +249,8 @@ class DqnAgent:
         """
         if self.epsilon_or_boltzmann:
             # Exploration: epsilon-greedy
-            if np.random.random() < self.epsilon_max:
+            rand_num = np.random.random()
+            if rand_num < self.epsilon_max:
                 return self.action_space.sample()
 
             # Exploitation: the action is selected based on the Q-values.
@@ -286,7 +289,19 @@ class DqnAgent:
             Else, it will learn based on Double DQN.
         """
         # Sample a batch of experiences from the replay memory
-        states, actions, next_states, rewards, dones = self.replay_memory.sample(batch_size)
+        if self.choose_good_mem:
+            mem = np.random.choice(self.good_memory)
+            states, actions, next_states, rewards, dones = mem.sample(len(mem))
+        else:
+            states, actions, next_states, rewards, dones = self.replay_memory.sample(batch_size)
+        """if self.epsilon_max <= 0.2:
+            mem_rand = np.random.random()
+            if mem_rand >= self.epsilon_max:
+                states, actions, next_states, rewards, dones = self.good_memory.sample(batch_size)
+            else:
+                states, actions, next_states, rewards, dones = self.replay_memory.sample(batch_size)
+        else:
+            states, actions, next_states, rewards, dones = self.replay_memory.sample(batch_size)"""
 
         actions = actions.unsqueeze(1)
         rewards = rewards.unsqueeze(1)
@@ -395,7 +410,7 @@ class StepWrapper(gym.Wrapper):
 
         modified_state = self.observation_wrapper.observation(state)
         modified_reward = self.reward_wrapper.reward(modified_state, reward)
-        return modified_state, modified_reward, done, truncation, info  # The same returns as usual but with modified versions of the state and reward functions
+        return modified_state, reward, done, truncation, info  # The same returns as usual but with modified versions of the state and reward functions
 
     def reset(self, seed):
         state, info = self.env.reset(seed=seed)  # Same as before as usual
@@ -448,9 +463,9 @@ class RewardWrapper(gym.RewardWrapper):
             #print('up')
             return -10
         if (0.49 < state[3] < 0.52) and (state[1] > 0.52):
-            self.bad_counter = min(90, self.bad_counter + 1)
+            self.bad_counter = min(110, self.bad_counter + 1)
             #print(f'{self.bad_counter} state[3]: {state[3]}, state[1]: {state[1]}')
-            addition = -math.exp(self.bad_counter - 80)
+            addition = -math.exp(self.bad_counter - 100)
         else:
             self.bad_counter = 0
 
@@ -468,8 +483,12 @@ class ModelTrainTest():
         self.save_interval = hyperparams["save_interval"]
 
         self.clip_grad_norm = hyperparams["clip_grad_norm"]
-        self.learning_rate = hyperparams["learning_rate"]
+        self.initial_learning_rate = hyperparams["initial_learning_rate"]
+        self.learning_rate_coefficient = hyperparams["learning_rate_coefficient"]
+        self.final_learning_rate = hyperparams["final_learning_rate"]
         self.discount_factor = hyperparams["discount_factor"]
+        self.discount_factor_coefficient = hyperparams["discount_factor_coefficient"]
+        self.max_discount_factor = hyperparams["max_discount_factor"]
         self.batch_size = hyperparams["batch_size"]
         self.update_frequency = hyperparams["update_frequency"]
         self.max_episodes = hyperparams["max_episodes"]
@@ -507,17 +526,18 @@ class ModelTrainTest():
                               epsilon_or_boltzmann=self.epsilon_or_boltzmann,
                               epsilon_decay=self.epsilon_decay,
                               clip_grad_norm=self.clip_grad_norm,
-                              learning_rate=self.learning_rate,
-                              discount=self.discount_factor,
+                              learning_rate=self.initial_learning_rate,
+                              discount=0,
                               memory_capacity=self.memory_capacity,
                               d3_or_d=self.d3_or_d)
 
     def dqn_train(self):
         total_steps = 0
         self.reward_history = []
-
+        gama_t = 0  # hybrid discount factor.
         # Training loop over episodes
         for episode in range(1, self.max_episodes + 1):
+            good_experience = ReplayMemory(None)
             state, _ = self.env.reset(seed=seed)
             done = False
             truncation = False
@@ -527,13 +547,7 @@ class ModelTrainTest():
                 action = self.agent.select_action(state)
                 next_state, reward, done, truncation, _ = self.env.step(action)
                 self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))
-                """if float(reward) >= 100:
-                    print(f'found a good experience {reward}, adding it 1000 times into the memory.')
-                    for i in range(10):
-                        self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))
-                    print('done.')
-                else:
-                    self.agent.replay_memory.store(state, action, next_state, reward, (done or truncation))"""
+                good_experience.store(state, action, next_state, reward, (done or truncation))
                 if len(self.agent.replay_memory) > self.batch_size:
                     self.agent.learn(self.batch_size, (done or truncation))
 
@@ -548,7 +562,22 @@ class ModelTrainTest():
 
             # Appends for tracking history
             self.reward_history.append(episode_reward)  # episode reward
+            if episode_reward >= 300:
+                print(f'Found a special experience, got to be saved.')
+                self.agent.save(self.save_path + '_' + f'{episode}_special' + '.pth')
+                print('done.')
+                self.plot_training(episode)
+                return
 
+            # Adding the good experience to the memory again.
+            if episode_reward >= 200:
+                print(f'Found a good experience adding it to the good memory of agent.')
+                self.agent.good_memory.append(good_experience)
+                print(f'Done, the experiences are added.')
+
+            # After some episodes only imitate the good experiences.
+            if episode >= 700:
+                self.agent.choose_good_mem = True
             # Decay epsilon at the end of each episode
             if self.epsilon_or_boltzmann:
                 self.agent.update_epsilon()
@@ -569,13 +598,27 @@ class ModelTrainTest():
                           f"Total Steps: {total_steps}, "
                           f"Ep Step: {step_size}, "
                           f"Raw Reward: {episode_reward:.2f}, "
-                          f"Epsilon: {self.agent.epsilon_max:.2f}")
+                          f"Discount Factor: {gama_t:.2f}, "
+                          f"Learning rate: {self.agent.optimizer.param_groups[0]['lr']:.6f}, "
+                          f"Epsilon: {self.agent.epsilon_max:.2f}, "
+                          f"Choose good mem: {self.agent.choose_good_mem}")
             else:
                 result = (f"Episode: {episode}, "
                           f"Total Steps: {total_steps}, "
                           f"Ep Step: {step_size}, "
                           f"Raw Reward: {episode_reward:.2f}, "
-                          f"Boltzmann: {self.agent.temp:.2f}")
+                          f"Discount Factor: {gama_t:.2f}, "
+                          f"Learning rate: {self.agent.optimizer.param_groups[0]['lr']:.6f}, "
+                          f"Boltzmann: {self.agent.temp:.2f}, "
+                          f"Choose good mem: {self.agent.choose_good_mem}")
+
+            self.initial_learning_rate = max(self.final_learning_rate, self.initial_learning_rate*self.learning_rate_coefficient)
+            for group in self.agent.optimizer.param_groups:
+                group['lr'] = self.initial_learning_rate
+
+            gama_t = min(self.discount_factor - self.discount_factor_coefficient * (1 - gama_t), self.max_discount_factor)
+            self.agent.discount = gama_t
+
             print(result)
         self.plot_training(episode)
 
@@ -679,16 +722,20 @@ if __name__ == '__main__':
     render = not train_mode
     RL_hyperparams = {
         "train_mode": train_mode,
-        "RL_load_path": './d3qn/final_weights_r_new' + '_' + '900' + '.pth',
-        "save_path": './d3qn/final_weights_r_new',
+        "RL_load_path": './d3qn/final_weights_hybrid_simple' + '_' + '1503_special' + '.pth',
+        "save_path": './d3qn/final_weights_hybrid_simple',
         "save_interval": 100,
 
         "clip_grad_norm": 5,
-        "learning_rate": 75e-5,
-        "discount_factor": 0.96,
+        "initial_learning_rate": 1e-3,
+        "learning_rate_coefficient": 0.995,
+        "final_learning_rate": 75e-5,
+        "discount_factor": 1,
+        "max_discount_factor": 0.97,
+        "discount_factor_coefficient": 0.9966,
         "batch_size": 64,
         "update_frequency": 20,
-        "max_episodes": 1000 if train_mode else 2,
+        "max_episodes": 2000 if train_mode else 2,
         "max_steps": 1000,
         "render": render,
 
