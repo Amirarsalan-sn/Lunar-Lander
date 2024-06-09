@@ -19,7 +19,7 @@ Double DQN is a way of improving the DQN method which seeks to solve the over es
 </p>
 
 ### Double DQN Simple
-In this section the model is just trained with plain states and rewards of the enviroment (no reward wrapper and state wrapper is applied). Results in episode 1000 of training are as follows:
+In this section the model is just trained with plain states and rewards of the enviroment (no reward wrapper and no state wrapper is applied). Results in episode 1000 of training are as follows:
 
 Episode steps: 1000
 
