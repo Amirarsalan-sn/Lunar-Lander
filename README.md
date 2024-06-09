@@ -25,7 +25,9 @@ Episode steps: 1000
 
 Episode reward: 114
 
-![game play](images/gif/double_dqn_1000_114.gif)
+<p align="center">
+  <img src="images/gif/double_dqn_1000_114.gif" alt="game play">
+</p>
 
 ### Double DQN Simple With More Exploration
 A big problem which I encountered during the training of the last method was the hovering of the lander. I belived that this happened because the time that agent learns to maintatin its stabality, the epsilon was to low so that agent couldn't explore actions which decrease the agent's hight in the stable state. The agent indeed explored actions which decrease the agent's hight but the exploration wasn't from a stable state so most of those decays in hight resulted in crashing which makes the agent think that decrease in hight results in crash and bad rewards. So, I decreased the epsilone decay rate a littl bit to ensure the agent finds the answer starting from a stable state. Results in episode 700 of training are as fallows:
@@ -34,7 +36,9 @@ Episode steps: 499
 
 Episode reward: 254
 
-![game play](images/gif/double_dqn2_700ep_499st_254r.gif)
+<p align="center">
+  <img src="images/gif/double_dqn2_700ep_499st_254r.gif" alt="game play">
+</p>
 
 ### Double DQN Boltzman
 Regarding that the input state space is very big and absolute random exploration might not result in good experiences. It might be a reasonable choice to use whatever the agent has learned in the prior training episodes. It is correct that the agent hasn't learned good things, but, it for sure nows bad the bad actions in the beggining of an episode and that might help us. So I trained the model again using a state wrapper (actually a normilizer of state) and boltzman policy and it improved the performance distinguishably. The results of training are as follows:
@@ -45,12 +49,14 @@ Episode steps: 350
 
 Episode reward: 262
 
-![game play](images/gif/double_dqn_boltzman_700ep_350st_262r.gif)
+<p align="center">
+  <img src="images/gif/double_dqn_boltzman_700ep_350st_262r.gif" alt="game play">
+</p>
 
 <p align="center">
-  <img src="/images/double_boltzman/reward_plot.png" alt="reward" width="200" style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean" width="200" style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Loss_plot.png" alt="loss" width="200">
+  <img src="/images/double_boltzman/reward_plot.png" alt="reward" >
+  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean">
+  <img src="/images/double_boltzman/Loss_plot.png" alt="loss">
 </p>
 
 ## Dueling Double DQN
