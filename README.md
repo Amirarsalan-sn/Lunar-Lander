@@ -12,7 +12,7 @@ This project demonstrates several soloutions for the LunarLander [environment gy
   - [Imitation After D3QN](#imitation-after-d3qn)
 
 ## Double DQN
-Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a terget network which is updated periodicaly and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as deplayed in the image below.
+Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a terget network which is updated periodicaly and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as desplayed in the image below.
 
 <p align="center">
   <img src="/images/formulas/Screenshot%202024-06-09%20131539.png" alt="Q target in Double DQN">
@@ -30,7 +30,7 @@ Episode reward: 114
 </p>
 
 ### Double DQN Simple With More Exploration
-A big problem which I encountered during the training of the last method was the hovering of the lander. The lander would converge to a state which it was just hovering. I belived that this happened because the time that agent learns to maintatin its stabality, the epsilon was to low so that agent couldn't explore actions which decrease the agent's hight in the stable state. The agent indeed explored actions which decrease the agent's hight but the exploration wasn't from a stable state so most of those decays in hight resulted in crashing which makes the agent think that decrease in hight results in crash and bad rewards. So, I decreased the epsilone decay rate a littl bit to ensure the agent finds the answer starting from a stable state. Results in episode 700 of training are as fallows:
+One of the problems I encountered during the training of the last method was the hovering of the lander. The lander would converge to a state which it was just hovering. I belive that this happenes because, at the time that the agent learns to maintatin its stabality, the epsilon is too low so that the agent can't explore actions which makes the agent go down in the stable state. The agent indeed explored actions which decrease the agent's hight but the exploration wasn't from a stable state, so most of those decays in hight resulted in crashing, which makes the agent think that decrease in hight results in crash and bad rewards. So, I decreased the epsilone decay rate a little bit to ensure the agent can still explore different actions when it learns to maintain balance (exploration from a good state has higher a probability of finding an answer). Results in episode 700 of training are as fallows:
 
 Episode steps: 499
 
@@ -41,7 +41,7 @@ Episode reward: 254
 </p>
 
 ### Double DQN Boltzman
-Regarding that the input state space is very big and absolute random exploration might not result in good experiences. It might be a reasonable choice to use whatever the agent has learned in the prior training episodes. It is correct that the agent hasn't learned good things, but, it for sure nows bad the bad actions in the beggining of an episode and that might help us. So I trained the model again using a state wrapper (actually a normilizer of state) and boltzman policy and it improved the performance distinguishably. The results of training are as follows:
+Regarding that the input state space is very big and absolute random exploration might not result in good experiences. It might be a reasonable choice to use whatever the agent has learned in the prior training episodes. It is correct that the agent hasn't learned good actions yet, but, it for sure knows bad actions at the beggining of the training and that might help us. So I trained the model again using a state wrapper (actually a normilizer of state) and boltzman policy and it improved the performance distinguishably. The results of training are as follows:
 
 **Episode** : 700
 
@@ -73,7 +73,7 @@ Dueling Double DQN also suffered from hovering. So, I decided to implement a rew
   <img src="images/formulas/reward_wrap.png" alt="reward wrapper">
 </p>
 
-This formula give exponential minus reward to the agent as far as it is hovering. But, hovering is essential for maintaining stabality. So, the agent needs to hover if it wants to gain balance and land safely. Therefore, a Hover Limit is presented into the formula: reward wrapper counts the steps of agents hovering, as far as these steps are below the Hover Limit we are fine. When the hovering steps exceeds the Hover Limit, the agent gets **exponentialy** bad rewards. But, there is another possiblity here, the agent can conclude going up is the best action always but why? Sofar, the agent thought going down would result in failure so it hovers, no we are saying that hovering is also bad so it can conclude going up is the best option available (if the mean of the rewards of "going up" is less than the mean of the reward of "going down"). In order to solve this issue, whenever the agent's speed is higher than a particular amount, a sufficient minus reward is returned. 
+This formula give exponential minus reward to the agent as long as it is hovering. But, hovering is essential for maintaining stabality. So, the agent needs to hover if it wants to gain balance and land safely. Therefore, a Hover Limit is presented into the formula: reward wrapper counts the steps of agents hovering, as far as these steps are below the Hover Limit we are fine. When the hovering steps exceeds the Hover Limit, the agent gets **exponentialy** bad rewards. But, there is another possiblity here, the agent can conclude going up is the best action always but why? Sofar, the agent thought going down would result in failure so it hovers, no we are saying that hovering is also bad so it can conclude going up is the best option available (if the mean of the rewards of "going up" is less than the mean of the reward of "going down"). In order to solve this issue, whenever the agent's speed is higher than a particular amount, a sufficient minus reward is returned. 
 
 The reward wrapper code is as fallows:
 ```python
