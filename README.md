@@ -54,9 +54,9 @@ Episode reward: 262
 </p>
 
 <p align="center">
-  <img src="/images/double_boltzman/reward_plot.png" alt="reward" style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean" style="margin-right: 10px;">
-  <img src="/images/double_boltzman/Loss_plot.png" alt="loss">
+  <img src="/images/double_boltzman/reward_plot.png" alt="reward" width=450 style="margin-right: 10px;">
+  <img src="/images/double_boltzman/Q_value_mean.png" alt="q mean" width=450 style="margin-right: 10px;">
+  <img src="/images/double_boltzman/Loss_plot.png" alt="loss" width=450>
 </p>
 
 ## Dueling Double DQN
