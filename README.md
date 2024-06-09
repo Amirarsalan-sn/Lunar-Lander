@@ -1,15 +1,15 @@
 # Lunar-Lander
 This project demonstrates several soloutions for the LunarLander [environment gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/). The environment is sloved mainly using double dqn and dueling double dqn (d3qn). But, for solving the challenges I faced during the training process, other methods combined with these two methods are tested in order to get the proper result which are fully described in this document. They are combined with different techniques like Boltzman policy, reward wrapping and even an imitation method of learning is used. So bear with me.
 ## Table of Contents
-- [Double DQN](##-double-dqn)
-  - [Double DQN Simple](###-double-dqn-simple)
-  - [Double DQN Simple With More Exploration](###-double-dqn-simple-with-more-exploration)
-  - [Double DQN Boltzman](###-double-ddn-boltzman)
-- [Dueling Double DQN](##-dueling-double-dqn)
-  - [Dueling Double DQN With Reward Wrapper](###-dueling-double-dqn-with-reward-wrapper)
-  - [Hybrid Dueling Double DQN With Reward Wrapper](###-hybrid-dueling-double-dqn-with-reward-wrapper)
-  - [Simple Hybrid Dueling Double DQN](###-simple-hybrid-dueling-double-dqn)
-  - [Imitation After D3QN](###-imitation-after-d3qn)
+- [Double DQN](#double-dqn)
+  - [Double DQN Simple](#double-dqn-simple)
+  - [Double DQN Simple With More Exploration](#double-dqn-simple-with-more-exploration)
+  - [Double DQN Boltzman](#double-ddn-boltzman)
+- [Dueling Double DQN](#dueling-double-dqn)
+  - [Dueling Double DQN With Reward Wrapper](#dueling-double-dqn-with-reward-wrapper)
+  - [Hybrid Dueling Double DQN With Reward Wrapper](#hybrid-dueling-double-dqn-with-reward-wrapper)
+  - [Simple Hybrid Dueling Double DQN](#simple-hybrid-dueling-double-dqn)
+  - [Imitation After D3QN](#imitation-after-d3qn)
 
 ## Double DQN
 Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a terget network which is updated periodicaly and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as deplayed in the image below.
