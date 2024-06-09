@@ -11,3 +11,5 @@ This project demonstrates several soloutions for the LunarLander [environment gy
   - [Imitation After D3QN](###-Imitation-After-D3QN)
 
 ## Double DQN
+Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a terget network which is updated periodicaly and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as deplayed in the image below.
+[Q target in Double DQN](/images/fourmulas/Screenshot-2024-06-09-131539.png)
