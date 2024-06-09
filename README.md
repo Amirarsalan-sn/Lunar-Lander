@@ -3,6 +3,7 @@ This project demonstrates several soloutions for the LunarLander [environment gy
 ## Table of Contents
 - [Double DQN](##-Double-DQN)
   - [Double DQN Simple](###-Double-DQN-Simple)
+  - [Double DQN Simple With More Exploration](###-Double-DQN-Simple-With-More-Exploration)
   - [Double DQN Boltzman](###-Double-DQN-Boltzman)
 - [Dueling Double DQN](##-Dueling-Double-DQN)
   - [Dueling Double DQN With Reward Wrapper](###-Dueling-Double-DQN-With-Reward-Wrapper)
@@ -16,4 +17,18 @@ Double DQN is a way of improving the DQN method which seeks to solve the over es
 <p align="center">
   <img src="/images/formulas/Screenshot%202024-06-09%20131539.png" alt="Q target in Double DQN">
 </p>
-![Q target in Double DQN](/images/formulas/Screenshot%202024-06-09%20131539.png){: .align-center}
+
+### Double DQN Simple
+In this section the model is just trained with plain states and rewards of the enviroment (no reward wrapper and state wrapper is applied). Results in episode 1000 of training are as follows:
+Episode steps: 1000
+Episode reward: 114
+![game play](/images/gif/double_dqn_1000_114.gif)
+
+### Double DQN Simple With More Exploration
+A big problem which I encountered during the training of the last method was the hovering of the lander. I belived that this happened because the time that agent learns to maintatin its stabality, the epsilon was to low so that agent couldn't explore actions which decrease the agent's hight in the stable state. The agent indeed explored actions which decrease the agent's hight but the exploration wasn't from a stable state so most of those decays in hight resulted in crashing which makes the agent think that decrease in hight results in crash and bad rewards. So, I decreased the epsilone decay rate a littl bit to ensure the agent finds the answer starting from a stable state. Results in episode 700 of training are as fallows:
+Episode steps: 499
+Episode reward: 254
+![game play](/image/gif/double_dqn2_700ep_499st_254r.gif)
+
+### Double DQN Boltzman
+
