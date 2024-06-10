@@ -148,7 +148,7 @@ Episode reward: 178
 According to [this article](https://doi.org/10.48550/arXiv.1512.02011), the errors in the Q-value estimates can be propagated through the network in an unstable manner via the MSE loss function and prevent reliable convergence to the optimal Q function. This instability is exacerbated when using a large gamma (γ) close to 1, as it increases the complexity of the policy space that needs to be learned. The authors hypothesize that starting with a smaller γ initially targets simpler policies and reduces the propagation of errors in the early stages of training. Then, gradually increasing γ allows the policy complexity to be learned in a more stable manner. They also combined this approach with a decaying learning rate during training to achieve further improvements. They empirically found that the increasing gamma approach, along with a gradually decreasing learning rate, was able to show improved training stability and better final performance on Atari games compared to the baseline DQN approach. However, they did not conduct these experiments with the D3QN algorithm. Now, I used this method (along with decreasing the learning rate gradually) to see if it makes any difference. The disount factor is initiated by zero and is increased according to this formula:
 
 <p align="center">
-  <img src="images/formulas/discount.png" alt="discount">
+  <img src="images/formulas/discount2.png" alt="discount">
 </p>
 
 Results of training are as follows:
