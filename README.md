@@ -1,5 +1,5 @@
 # Lunar-Lander
-This project demonstrates several soloutions for the LunarLander [environment gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/). The environment is sloved mainly using double dqn and dueling double dqn (d3qn). But, for solving the challenges I faced during the training process, other methods combined with these two methods are tested in order to get the proper result which are fully described in this document. The two main methods are combined with different techniques like Boltzman policy, reward wrapping and even an imitation method of learning. The best soloution (the one with the highest gained reward) was found using the last method. So bear with me.
+This project demonstrates several soloutions for the LunarLander [environment gymnasium](https://gymnasium.farama.org/environments/box2d/lunar_lander/). The environment is sloved mainly using double dqn and dueling double dqn (d3qn). But, for solving the challenges I faced during the training process, other methods combined with these two methods are tested in order to get the proper result which are fully described in this document. The two main methods are combined with different techniques like Boltzman policy, reward wrapping and even an imitation method of learning. The best solution (the one with the highest gained reward) was found using the last method. So bear with me.
 ## Table of Contents
 - [Double DQN](#double-dqn)
   - [Double DQN Simple](#double-dqn-simple)
@@ -12,14 +12,14 @@ This project demonstrates several soloutions for the LunarLander [environment gy
   - [Imitation After D3QN](#imitation-after-d3qn)
 
 ## Double DQN
-Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a terget network which is updated periodicaly and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as desplayed in the image below.
+Double DQN is a way of improving the DQN method which seeks to solve the over estimation problem occured in the classical DQN. It also introduces a target network which is updated periodically and helps the main network to reduce its loss easier. In Double DQN, the target value for the main network is computed as displayed in the image below.
 
 <p align="center">
   <img src="/images/formulas/Screenshot%202024-06-09%20131539.png" alt="Q target in Double DQN">
 </p>
 
 ### Double DQN Simple
-In this section the model is just trained with plain states and rewards of the enviroment (no reward wrapper and no state wrapper is applied). Results in episode 1000 of training are as follows:
+In this section the model is just trained with plain states and rewards of the environment (no reward wrapper and no state wrapper is applied). Results in episode 1000 of training are as follows:
 
 Episode steps: 1000
 
@@ -30,7 +30,7 @@ Episode reward: 114
 </p>
 
 ### Double DQN Simple With More Exploration
-One of the problems I encountered during the training of the last method was the hovering of the lander. The lander would converge to a state which it was just hovering. I belive that this happenes because, at the time that the agent learns to maintatin its stabality, the epsilon is too low so that the agent can't explore actions which makes the agent go down in the stable state. The agent indeed explored actions which decrease the agent's hight but the exploration wasn't from a stable state, so most of those decays in hight resulted in crashing, which makes the agent think that decrease in hight results in crash and bad rewards. So, I decreased the epsilone decay rate a little bit to ensure the agent can still explore different actions when it learns to maintain balance (exploration from a good state has higher a probability of finding an answer). Results in episode 700 of training are as fallows:
+One of the problems I encountered during the training of the last method was the hovering of the lander. The lander would converge to a state which it was just hovering. I believe that this happenes because, at the time that the agent learns to maintatin its stabality, the epsilon is too low so that the agent can't explore actions which makes the agent go down in the stable state. The agent indeed explored actions which decrease the agent's height but the exploration wasn't from a stable state, so most of those decays in hight resulted in crashing, which makes the agent think that decrease in height results in crash and bad rewards. So, I decreased the epsilon decay rate a little bit to ensure the agent can still explore different actions when it learns to maintain balance (exploration from a good state has a higher probability of finding an answer). Results in episode 700 of training are as fallows:
 
 Episode steps: 499
 
@@ -73,7 +73,7 @@ Dueling Double DQN also suffered from hovering. So, I decided to implement a rew
   <img src="images/formulas/reward_wrap.png" alt="reward wrapper">
 </p>
 
-This formula give exponential minus reward to the agent as long as it is hovering. But, hovering is essential for maintaining stabality. So, the agent needs to hover if it wants to gain balance and land safely. Therefore, a Hover Limit is presented into the formula: reward wrapper counts the steps of agents hovering, as far as these steps are below the Hover Limit we are fine. When the hovering steps exceeds the Hover Limit, the agent gets **exponentialy** bad rewards. But, there is another possiblity here, the agent can conclude going up is the best action always but why? Sofar, the agent thought going down would result in failure so it hovers, no we are saying that hovering is also bad so it can conclude going up is the best option available (if the mean of the rewards of "going up" is less than the mean of the reward of "going down"). In order to solve this issue, whenever the agent's speed is higher than a particular amount, a sufficient minus reward is returned. 
+This formula give exponential minus reward to the agent as long as it is hovering. But, hovering is essential for maintaining stability. So, the agent needs to hover if it wants to gain balance and land safely. Therefore, a Hover Limit is presented into the formula: reward wrapper counts the steps of agents hovering, as far as these steps are below the Hover Limit we are fine. When the hovering steps exceeds the Hover Limit, the agent gets **exponentially** bad rewards. But, there is another possiblity here, the agent can conclude going up is the best action always but why? So far, the agent thought going down would result in failure so it hovers, no we are saying that hovering is also bad so it can conclude going up is the best option available (if the mean of the rewards of "going up" is less than the mean of the reward of "going down"). In order to solve this issue, whenever the agent's speed is higher than a particular amount, a sufficient minus reward is returned. 
 
 The reward wrapper code is as fallows:
 ```python
@@ -92,7 +92,7 @@ The reward wrapper code is as fallows:
         return float(reward) + addition
 ```
 
-It actually helped the agent in finding soloutions and the agent found more soloutions earlier than the prior methods.
+It actually helped the agent in finding solutions and the agent found more solutions earlier than the prior methods.
 
 Epsiode: 500
 
@@ -179,7 +179,7 @@ For testing the power of this method I even tested it just with state wrapper (n
 </p>
 
 ### Imitation After D3QN
-One idea which I came up with, was to use some sort of imitation methods after hybrid d3qn. The idea was to use the hybrid d3qn to find good soloutions fast and store these good soloutions in another memory. After a certain number of episodes, the experience replay memory of the agent chenges with this good memory and this memory expands only with successful experiences along with the imitation process. This way the agent is encouraged to imitate good experiences and output good (or even better) soloutions. First,The agent experienced a performance collapse at changing the memories, but, after some episodes it found the best soloution which gained the highest reward among other methods tried earlier.
+One idea which I came up with, was to use some sort of imitation methods after hybrid d3qn. The idea was to use the hybrid d3qn to find good soloutions fast and store these good soloutions in another memory. After a certain number of episodes, the experience replay memory of the agent chenges with this good memory and this memory expands only with successful experiences along with the imitation process. This way the agent is encouraged to imitate good experiences and output good (or even better) solutions. First,The agent experienced a performance collapse at changing the memories, but, after some episodes it found the best solution which gained the highest reward among other methods tried earlier.
 
 Episode: 1503
 
